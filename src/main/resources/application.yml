@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: task-management
+
+  mongodb:
+    uri: ${MONGODB_URI}
