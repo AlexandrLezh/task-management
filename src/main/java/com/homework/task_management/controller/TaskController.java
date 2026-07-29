@@ -4,9 +4,15 @@ import com.homework.task_management.dto.CreateTaskRequest;
 import com.homework.task_management.dto.TaskResponse;
 import com.homework.task_management.dto.UpdateTaskRequest;
 import com.homework.task_management.model.Task;
+import com.homework.task_management.model.TaskPriority;
+import com.homework.task_management.model.TaskStatus;
 import com.homework.task_management.service.TaskService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,9 +37,23 @@ public class TaskController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TaskResponse>> getAllTasks() {
+    public ResponseEntity<Page<TaskResponse>> getAllTasks(
+            @RequestParam(required = false)
+            TaskStatus status,
 
-        return ResponseEntity.ok(taskService.getAll());
+            @RequestParam(required = false)
+            TaskPriority priority,
+
+            @PageableDefault(
+                    page = 0,
+                    size = 10,
+                    sort = "createdAt",
+                    direction = Sort.Direction.DESC
+            )
+            Pageable pageable
+    ) {
+
+        return ResponseEntity.ok(taskService.getAll(status, priority, pageable));
     }
 
     @GetMapping("/{id}")

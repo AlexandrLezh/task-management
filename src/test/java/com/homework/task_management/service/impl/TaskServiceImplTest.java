@@ -11,9 +11,11 @@ import com.homework.task_management.model.TaskStatus;
 import com.homework.task_management.repository.TaskRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.*;
 
 import java.time.Instant;
 import java.util.List;
@@ -143,7 +145,11 @@ class TaskServiceImplTest {
     }
 
     @Test
-    void shouldReturnAllTasks() {
+    void shouldReturnAllTasksWithPagination() {
+
+
+        Instant firstCreatedAt = Instant.parse( "2026-07-29T15:00:00Z" );
+        Instant secondCreatedAt = Instant.parse( "2026-07-29T16:00:00Z" );
 
         Task firstTask = new Task();
         firstTask.setId("1");
@@ -151,8 +157,8 @@ class TaskServiceImplTest {
         firstTask.setDescription("Study Spring Data MongoDB");
         firstTask.setStatus(TaskStatus.TODO);
         firstTask.setPriority(TaskPriority.LOW);
-        firstTask.setCreatedAt(Instant.now());
-        firstTask.setUpdatedAt(Instant.now());
+        firstTask.setCreatedAt(firstCreatedAt);
+        firstTask.setUpdatedAt(firstCreatedAt);
 
         Task secondTask = new Task();
         secondTask.setId("2");
@@ -160,8 +166,8 @@ class TaskServiceImplTest {
         secondTask.setDescription("Write service layer tests");
         secondTask.setStatus(TaskStatus.IN_PROGRESS);
         secondTask.setPriority(TaskPriority.HIGH);
-        secondTask.setCreatedAt(Instant.now());
-        secondTask.setUpdatedAt(Instant.now());
+        secondTask.setCreatedAt(secondCreatedAt);
+        secondTask.setUpdatedAt(secondCreatedAt);
 
 
         TaskResponse firstResponse = new TaskResponse(
@@ -170,8 +176,8 @@ class TaskServiceImplTest {
                 "Study Spring Data MongoDB",
                 TaskStatus.TODO,
                 TaskPriority.LOW,
-                firstTask.getCreatedAt(),
-                firstTask.getUpdatedAt()
+                firstCreatedAt,
+                firstCreatedAt
         );
 
         TaskResponse secondResponse = new TaskResponse(
@@ -180,24 +186,52 @@ class TaskServiceImplTest {
                 "Write service layer tests",
                 TaskStatus.IN_PROGRESS,
                 TaskPriority.HIGH,
-                secondTask.getCreatedAt(),
-                secondTask.getUpdatedAt()
+                secondCreatedAt,
+                secondCreatedAt
         );
 
-        when(taskRepository.findAll()).thenReturn(List.of(firstTask, secondTask));
+        Pageable pageable = PageRequest.of(
+                0,
+                2,
+                Sort.by(
+                        Sort.Direction.DESC,
+                        "createdAt"
+                )
+        );
+
+        Page<Task> taskPage = new PageImpl<>(
+                List.of(firstTask, secondTask),
+                pageable,
+                5
+        );
+
+        when(taskRepository.findAll(
+                ArgumentMatchers.<Example<Task>>any(),
+                eq(pageable)
+        )).thenReturn(taskPage);
         when(taskMapper.toResponse(firstTask)).thenReturn(firstResponse);
         when(taskMapper.toResponse(secondTask)).thenReturn(secondResponse);
 
-        List<TaskResponse> result = taskService.getAll();
+        Page<TaskResponse> result = taskService.getAll(
+                null,
+                null,
+                pageable
+        );
 
-        assertThat(result)
-                .hasSize(2)
+        assertThat(result).hasSize(2);
+        assertThat(result.getContent())
                 .containsExactly(
                         firstResponse,
                         secondResponse
                 );
-
-        verify(taskRepository).findAll();
+        assertThat(result.getNumber()).isZero();
+        // Total Tasks
+        assertThat(result.getTotalElements()).isEqualTo(5);
+        // Page size
+        assertThat(result.getSize()).isEqualTo(2);
+        // 5 Tasks divided by 2 pageSize equal 3 Pages
+        assertThat(result.getTotalPages()).isEqualTo(3);
+        verify(taskRepository).findAll(ArgumentMatchers.<Example<Task>>any(), eq(pageable));
         verify(taskMapper).toResponse(firstTask);
         verify(taskMapper).toResponse(secondTask);
     }
@@ -221,5 +255,126 @@ class TaskServiceImplTest {
                 .hasMessage("Task with id: unknown-id was not found");
         verify(taskRepository).findById(id);
         verify(taskRepository, never()).save(any(Task.class));
+    }
+
+    @Test void shouldReturnTasksFilteredByStatus() {
+
+        TaskStatus status = TaskStatus.TODO;
+        Pageable pageable = PageRequest.of(0, 10);
+        Task task = new Task();
+        task.setId("1");
+        task.setTitle("Todo task");
+        task.setStatus(status);
+        task.setPriority( TaskPriority.MEDIUM );
+
+        TaskResponse response = new TaskResponse(
+                "1",
+                "Todo task",
+                null,
+                TaskStatus.TODO,
+                TaskPriority.MEDIUM,
+                Instant.parse( "2026-07-29T15:00:00Z" ),
+                Instant.parse( "2026-07-29T15:00:00Z" )
+        );
+
+        Page<Task> taskPage = new PageImpl<>(
+                List.of(task),
+                pageable,
+                1
+        );
+
+        when(taskRepository.findAll(ArgumentMatchers.<Example<Task>>any(), eq(pageable))).thenReturn(taskPage);
+        when(taskMapper.toResponse(task)).thenReturn(response);
+
+
+        Page<TaskResponse> result = taskService.getAll( status, null, pageable );
+
+        assertThat(result) .hasSize(1);
+        assertThat(result.getContent()).containsExactly(response);
+        verify(taskRepository).findAll(ArgumentMatchers.<Example<Task>>any(), eq(pageable));
+        verify(taskRepository, never()).findAll(pageable);
+    }
+
+    @Test void shouldReturnTasksFilteredByPriority() {
+
+        TaskPriority priority = TaskPriority.HIGH;
+        Pageable pageable = PageRequest.of(
+                0,
+                10
+        );
+
+        Task task = new Task();
+        task.setId("1");
+        task.setTitle("High priority task");
+        task.setStatus(TaskStatus.TODO);
+        task.setPriority(priority);
+
+        TaskResponse response = new TaskResponse(
+                "1",
+                "High priority task",
+                null,
+                TaskStatus.TODO,
+                TaskPriority.HIGH,
+                Instant.parse("2026-07-29T15:00:00Z"),
+                Instant.parse( "2026-07-29T15:00:00Z")
+        );
+
+        Page<Task> taskPage = new PageImpl<>(
+                List.of(task),
+                pageable,
+                1
+        );
+
+        when(taskRepository.findAll(ArgumentMatchers.<Example<Task>>any(), eq(pageable))).thenReturn(taskPage);
+        when(taskMapper.toResponse(task)).thenReturn(response);
+
+        Page<TaskResponse> result = taskService.getAll(null, priority, pageable );
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getContent()).containsExactly(response);
+        verify(taskRepository).findAll(ArgumentMatchers.<Example<Task>>any(), eq(pageable));
+        verify(taskRepository, never()).findAll(pageable);
+    }
+
+    @Test void shouldReturnTasksFilteredByStatusAndPriority() {
+
+        TaskStatus status = TaskStatus.TODO;
+        TaskPriority priority = TaskPriority.HIGH;
+        Pageable pageable = PageRequest.of(
+                0,
+                10
+        );
+
+        Task task = new Task();
+        task.setId("1");
+        task.setTitle("High priority todo task");
+        task.setStatus(status);
+        task.setPriority(priority);
+
+        TaskResponse response = new TaskResponse(
+                "1",
+                "High priority todo task",
+                null,
+                status,
+                priority,
+                Instant.parse("2026-07-29T15:00:00Z"),
+                Instant.parse("2026-07-29T15:00:00Z")
+        );
+
+        Page<Task> taskPage = new PageImpl<>(
+                List.of(task),
+                pageable,
+                1
+        );
+
+        when(taskRepository.findAll(ArgumentMatchers.<Example<Task>>any(), eq(pageable))).thenReturn(taskPage);
+        when(taskMapper.toResponse(task)).thenReturn(response);
+
+        Page<TaskResponse> result = taskService.getAll(status, priority, pageable);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getContent()).containsExactly(response);
+        verify(taskRepository).findAll(ArgumentMatchers.<Example<Task>>any(), eq(pageable));
+        verify(taskRepository, never()).findAll(pageable);
     }
 }
