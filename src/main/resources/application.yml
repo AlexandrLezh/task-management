@@ -8,3 +8,15 @@ spring:
   jackson:
     deserialization:
       fail-on-unknown-properties: true
+
+  datasource:
+    url: ${POSTGRES_URL}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+
+    jpa:
+      hibernate:
+        ddl-auto: validate
+
+    flyway:
+      enabled: true
