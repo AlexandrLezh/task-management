@@ -1,18 +1,21 @@
 package com.homework.task_management.service;
 
+import com.homework.task_management.dto.CreateTaskRequest;
+import com.homework.task_management.dto.TaskResponse;
+import com.homework.task_management.dto.UpdateTaskRequest;
 import com.homework.task_management.model.Task;
 
 import java.util.List;
 
 public interface TaskService {
 
-    Task createTask(Task task);
+    TaskResponse createTask(CreateTaskRequest request);
 
-    List<Task> getAll();
+    List<TaskResponse> getAll();
 
-    Task getTaskById(String id);
+    TaskResponse getTaskById(String id);
 
-    Task updateTask(String id, Task task);
+    TaskResponse updateTask(String id, UpdateTaskRequest request);
 
     void deleteTaskById(String id);
 }

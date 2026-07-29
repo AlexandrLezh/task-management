@@ -1,5 +1,8 @@
 package com.homework.task_management.controller;
 
+import com.homework.task_management.dto.CreateTaskRequest;
+import com.homework.task_management.dto.TaskResponse;
+import com.homework.task_management.dto.UpdateTaskRequest;
 import com.homework.task_management.model.Task;
 import com.homework.task_management.service.TaskService;
 import lombok.RequiredArgsConstructor;
@@ -17,33 +20,33 @@ public class TaskController {
     private final TaskService taskService;
 
     @PostMapping
-    public ResponseEntity<Task> createTask(@RequestBody Task task) {
+    public ResponseEntity<TaskResponse> createTask(@RequestBody CreateTaskRequest request) {
 
-        Task newTask = taskService.createTask(task);
+        TaskResponse response = taskService.createTask(request);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(newTask);
+                .body(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<Task>> getAllTasks() {
+    public ResponseEntity<List<TaskResponse>> getAllTasks() {
 
         return ResponseEntity.ok(taskService.getAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Task> findTaskById(@PathVariable String id) {
+    public ResponseEntity<TaskResponse> findTaskById(@PathVariable String id) {
 
         return ResponseEntity.ok(taskService.getTaskById(id));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Task> updateTask(
+    public ResponseEntity<TaskResponse> updateTask(
             @PathVariable String id,
-            @RequestBody Task task) {
+            @RequestBody UpdateTaskRequest request) {
 
-        return ResponseEntity.ok(taskService.updateTask(id, task));
+        return ResponseEntity.ok(taskService.updateTask(id, request));
     }
 
     @DeleteMapping("/{id}")
