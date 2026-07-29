@@ -4,3 +4,7 @@ spring:
 
   mongodb:
     uri: ${MONGODB_URI}
+
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
