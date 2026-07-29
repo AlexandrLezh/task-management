@@ -5,6 +5,7 @@ import com.homework.task_management.dto.TaskResponse;
 import com.homework.task_management.dto.UpdateTaskRequest;
 import com.homework.task_management.model.Task;
 import com.homework.task_management.service.TaskService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +21,7 @@ public class TaskController {
     private final TaskService taskService;
 
     @PostMapping
-    public ResponseEntity<TaskResponse> createTask(@RequestBody CreateTaskRequest request) {
+    public ResponseEntity<TaskResponse> createTask(@Valid @RequestBody CreateTaskRequest request) {
 
         TaskResponse response = taskService.createTask(request);
 
@@ -44,7 +45,7 @@ public class TaskController {
     @PutMapping("/{id}")
     public ResponseEntity<TaskResponse> updateTask(
             @PathVariable String id,
-            @RequestBody UpdateTaskRequest request) {
+            @Valid @RequestBody UpdateTaskRequest request) {
 
         return ResponseEntity.ok(taskService.updateTask(id, request));
     }
