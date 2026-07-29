@@ -1,5 +1,6 @@
 package com.homework.task_management.dto;
 
+import com.homework.task_management.model.TaskPriority;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -10,6 +11,8 @@ public record CreateTaskRequest(
         String title,
 
         @Size(max = 1000, message = "Description must not exceed 1000 characters")
-        String description
+        String description,
+
+        TaskPriority priority
 ) {
 }

@@ -1,5 +1,6 @@
 package com.homework.task_management.dto;
 
+import com.homework.task_management.model.TaskPriority;
 import com.homework.task_management.model.TaskStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -15,6 +16,8 @@ public record UpdateTaskRequest(
         String description,
 
         @NotNull(message = "Status is required")
-        TaskStatus status
+        TaskStatus status,
+
+        TaskPriority priority
 ) {
 }

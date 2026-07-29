@@ -6,6 +6,7 @@ import com.homework.task_management.dto.UpdateTaskRequest;
 import com.homework.task_management.errors.TaskNotFoundException;
 import com.homework.task_management.mapper.TaskMapper;
 import com.homework.task_management.model.Task;
+import com.homework.task_management.model.TaskPriority;
 import com.homework.task_management.model.TaskStatus;
 import com.homework.task_management.repository.TaskRepository;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,8 @@ class TaskServiceImplTest {
 
         CreateTaskRequest request = new CreateTaskRequest(
                 "Learn MongoDB",
-                "Description"
+                "Description",
+                TaskPriority.LOW
         );
 
         Task task = new Task();
@@ -52,6 +54,8 @@ class TaskServiceImplTest {
                 "Learn MongoDB",
                 "Description",
                 TaskStatus.TODO,
+                TaskPriority.LOW,
+                Instant.now(),
                 Instant.now()
         );
 
@@ -79,6 +83,8 @@ class TaskServiceImplTest {
                         "Test task",
                         null,
                         TaskStatus.TODO,
+                        TaskPriority.LOW,
+                        Instant.now(),
                         Instant.now()
                 );
 
@@ -144,14 +150,18 @@ class TaskServiceImplTest {
         firstTask.setTitle("Learn MongoDB");
         firstTask.setDescription("Study Spring Data MongoDB");
         firstTask.setStatus(TaskStatus.TODO);
+        firstTask.setPriority(TaskPriority.LOW);
         firstTask.setCreatedAt(Instant.now());
+        firstTask.setUpdatedAt(Instant.now());
 
         Task secondTask = new Task();
         secondTask.setId("2");
         secondTask.setTitle("Write unit tests");
         secondTask.setDescription("Write service layer tests");
         secondTask.setStatus(TaskStatus.IN_PROGRESS);
+        secondTask.setPriority(TaskPriority.HIGH);
         secondTask.setCreatedAt(Instant.now());
+        secondTask.setUpdatedAt(Instant.now());
 
 
         TaskResponse firstResponse = new TaskResponse(
@@ -159,7 +169,9 @@ class TaskServiceImplTest {
                 "Learn MongoDB",
                 "Study Spring Data MongoDB",
                 TaskStatus.TODO,
-                firstTask.getCreatedAt()
+                TaskPriority.LOW,
+                firstTask.getCreatedAt(),
+                firstTask.getUpdatedAt()
         );
 
         TaskResponse secondResponse = new TaskResponse(
@@ -167,7 +179,9 @@ class TaskServiceImplTest {
                 "Write unit tests",
                 "Write service layer tests",
                 TaskStatus.IN_PROGRESS,
-                secondTask.getCreatedAt()
+                TaskPriority.HIGH,
+                secondTask.getCreatedAt(),
+                secondTask.getUpdatedAt()
         );
 
         when(taskRepository.findAll()).thenReturn(List.of(firstTask, secondTask));
@@ -196,7 +210,8 @@ class TaskServiceImplTest {
         UpdateTaskRequest request = new UpdateTaskRequest(
                 "Updated task",
                 "Updated description",
-                TaskStatus.DONE
+                TaskStatus.DONE,
+                TaskPriority.MEDIUM
         );
 
         when(taskRepository.findById(id)).thenReturn(Optional.empty());
