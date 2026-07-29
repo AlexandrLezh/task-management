@@ -69,7 +69,7 @@ File:
 Content:
 
 ```env
-MONGODB_URI=<url-to-your-database>
+MONGODB_URI=mongodb://mongodb:27017/taskdb
 ```
 
 This variable is used by Spring Boot to configure the MongoDB connection.
