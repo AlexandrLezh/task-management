@@ -188,3 +188,7 @@ GET /api/v1/tasks?status=TODO&priority=HIGH&page=0&size=10&sort=createdAt,desc
 ## License
 
 Educational/demo project.
+
+## Future Next steps:
+
+Extract user service, task service, authentication service, notification service into separate modules and implement microservices and add kafka as message broker.
