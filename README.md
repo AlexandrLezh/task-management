@@ -1,298 +1,190 @@
-# Task Management Service
+# Task Management API
 
-A simple task management REST API built with **Spring Boot** and **MongoDB**.
+Task Management API is a Spring Boot service with JWT authentication.  
+It stores **users in PostgreSQL** and **tasks in MongoDB**.
 
-The application provides CRUD operations for managing tasks and uses MongoDB as a persistent data storage.
+## Stack
 
-## Technologies
+- Java 25
+- Spring Boot 4.1
+- Spring Security + OAuth2 Resource Server (JWT)
+- Spring Data JPA + Flyway (PostgreSQL)
+- Spring Data MongoDB
+- Maven
+- Docker / Docker Compose
 
-* Java 25
-* Spring Boot 4.1
-* Spring Web MVC
-* Spring Data MongoDB
-* MongoDB 7
-* Docker
-* Docker Compose
-* Maven
+## What it does
 
-## Features
+- Register and authenticate users
+- Issue JWT tokens
+- Create, read, update, and delete tasks
+- Filter tasks by status/priority
+- Return paged task lists
 
-* Create a task
-* Retrieve all tasks
-* Retrieve a task by ID
-* Update a task
-* Delete a task
-* Persistent MongoDB storage using Docker volumes
-* Configuration through environment variables
+## Project layout
 
-## Project Structure
-
-```
-task-management
-│
-├── src
-│   └── main
-│       ├── java
-│       └── resources
-│           └── application.yml
-│
-├── secrets
-│   ├── app.env
-│   └── mongodb.env
-│
-├── Dockerfile
+```text
+.
+├── src/main/java/com/homework/task_management
+│   ├── configuration
+│   ├── controller
+│   ├── dto
+│   ├── model
+│   ├── repository
+│   └── service
+├── src/main/resources
+│   ├── application.yml
+│   └── db/migration
 ├── docker-compose.yml
-├── pom.xml
-└── README.md
+├── Dockerfile
+└── pom.xml
 ```
 
-## Configuration and Secrets
+## Configuration
 
-Sensitive configuration values are stored outside of the application code.
+The app reads values from environment variables (via `application.yml`):
 
-The project expects the following secret files:
+- `MONGODB_URI`
+- `POSTGRES_URL`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `JWT_SECRET`
+- `JWT_EXPIRATION` (seconds)
 
-```
-.secrets/
-├── app.env
-└── mongodb.env
-```
+Docker Compose also expects env files in `.secrets/`:
 
-### Application secrets
+- `.secrets/app.env`
+- `.secrets/mongodb.env`
+- `.secrets/postgres.env`
 
-File:
+Do not commit `.secrets/` or real credentials.
 
-```
-.secrets/app.env
-```
+## Run with Docker Compose
 
-Content:
-
-```env
-MONGODB_URI=mongodb://mongodb:27017/taskdb
-```
-
-This variable is used by Spring Boot to configure the MongoDB connection.
-
----
-
-### MongoDB secrets
-
-File:
-
-```
-.secrets/mongodb.env
-```
-
-Content:
-
-```env
-MONGO_ROOT_USERNAME=change_me
-MONGO_ROOT_PASSWORD=change_me
-MONGO_DATABASE=taskdb
-```
-
-These variables configure the MongoDB container.
-
-> Do not commit the `.secrets` directory to the repository.
-> Add it to `.gitignore`:
-
-```
-.secrets/
-```
-
-For a production environment, secrets should be provided using a secret manager (for example Kubernetes Secrets, Docker Secrets, HashiCorp Vault, AWS Secrets Manager, etc.).
-
-## Running the Application
-
-### Prerequisites
-
-Make sure you have installed:
-
-* Docker
-* Docker Compose
-
-Verify installation:
+1. Create secrets folder and env files:
 
 ```bash
-docker --version
-docker-compose --version
+mkdir -p .secrets
 ```
 
----
+2. Fill `.secrets/*.env` with your local values.
 
-## Start the Application
-
-Create the secrets directory:
+3. Start services:
 
 ```bash
-mkdir .secrets
+docker compose up --build
 ```
 
-Add the required environment files:
+4. API base URL:
 
-```bash
-.secrets/app.env
-.secrets/mongodb.env
-```
-
-Build and start containers:
-
-```bash
-docker-compose up --build
-```
-
-The application will start:
-
-```
-Spring Boot service:
+```text
 http://localhost:8080
-
-MongoDB:
-Running inside Docker container
-
-MongoDB is exposed on the host machine:
-
-mongodb://localhost:27017
-
-For connections between application containers, MongoDB is available through the Docker Compose service name:
-
-mongodb://mongodb:27017/taskdb
 ```
 
----
-
-## Stop the Application
-
-Stop containers:
+Stop services:
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
-The MongoDB data will remain stored because the application uses a Docker volume.
-
-To remove containers and database data:
+Remove services + volumes:
 
 ```bash
-docker-compose down -v
+docker compose down -v
 ```
 
-## API Endpoints
+## Run locally (without Docker)
 
-Base URL:
+You need Java 25 and running PostgreSQL + MongoDB instances, then:
 
-```
-http://localhost:8080/api/v1/tasks
-```
-
-### Create Task
-
-```
-POST /tasks
+```bash
+./mvnw spring-boot:run
 ```
 
-Example request:
+## Authentication flow
+
+1. `POST /api/v1/auth/register`
+2. `POST /api/v1/auth/login` to receive `{ "token": "..." }`
+3. Use token for task endpoints:
+
+```text
+Authorization: Bearer <token>
+```
+
+## API
+
+### Auth
+
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+
+Register request:
 
 ```json
 {
-  "title": "Learn Spring Boot",
-  "description": "Complete task management project",
-  "status": "TODO"
+  "email": "user@example.com",
+  "password": "strong-password"
 }
 ```
 
----
-
-### Get All Tasks
-
-```
-GET /tasks
-```
-
----
-
-### Get Task By ID
-
-```
-GET /tasks/{id}
-```
-
----
-
-### Update Task
-
-```
-PUT /tasks/{id}
-```
-
-Example request:
+Login request:
 
 ```json
 {
-  "title": "Learn MongoDB",
-  "description": "Understand Docker MongoDB integration",
-  "status": "IN_PROGRESS"
+  "email": "user@example.com",
+  "password": "strong-password"
 }
 ```
 
----
+### Tasks
 
-### Delete Task
+Base path: `/api/v1/tasks` (JWT required)
 
-```
-DELETE /tasks/{id}
-```
+- `POST /api/v1/tasks`
+- `GET /api/v1/tasks`
+- `GET /api/v1/tasks/{id}`
+- `PUT /api/v1/tasks/{id}`
+- `DELETE /api/v1/tasks/{id}`
 
-## Database Persistence
+Create task request:
 
-MongoDB data is stored in a Docker volume:
-
-```yaml
-volumes:
-  - mongodb-data:/data/db
-```
-
-This means that restarting containers will not remove stored tasks.
-
-The data will only be deleted when removing volumes:
-
-```bash
-docker-compose down -v
+```json
+{
+  "title": "Learn Spring Security",
+  "description": "Finish JWT auth integration",
+  "priority": "MEDIUM"
+}
 ```
 
-## Useful Docker Commands
+Notes:
 
-View running containers:
+- `status` is set to `TODO` on create.
+- `priority` values: `LOW`, `MEDIUM`, `HIGH`.
+- `status` values: `TODO`, `IN_PROGRESS`, `DONE`.
 
-```bash
-docker ps
+Update task request:
+
+```json
+{
+  "title": "Learn Spring Security",
+  "description": "JWT auth complete",
+  "status": "IN_PROGRESS",
+  "priority": "HIGH"
+}
 ```
 
-View application logs:
+List/filter/pagination example:
 
-```bash
-docker logs task-service
+```text
+GET /api/v1/tasks?status=TODO&priority=HIGH&page=0&size=10&sort=createdAt,desc
 ```
 
-Access MongoDB container:
+## Data and migrations
 
-```bash
-docker exec -it task-mongodb mongosh
-```
-
-List MongoDB collections:
-
-```javascript
-show collections
-```
-
-View tasks:
-
-```javascript
-db.tasks.find().pretty()
-```
+- MongoDB keeps task documents (`tasks` collection).
+- PostgreSQL keeps users (`users` table).
+- Flyway migration: `V1__create_users_table.sql`.
 
 ## License
 
-This project is created for educational and demonstration purposes.
+Educational/demo project.
