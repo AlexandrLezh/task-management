@@ -9,9 +9,11 @@ import com.homework.task_management.model.Task;
 import com.homework.task_management.model.TaskPriority;
 import com.homework.task_management.model.TaskStatus;
 import com.homework.task_management.repository.TaskRepository;
+import com.homework.task_management.utility.CurrentUserService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -20,6 +22,7 @@ import org.springframework.data.domain.*;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -35,12 +38,15 @@ class TaskServiceImplTest {
     @Mock
     private TaskMapper taskMapper;
 
+    @Mock
+    private CurrentUserService currentUserService;
+
     @InjectMocks
     private TaskServiceImpl taskService;
 
     @Test
     void shouldCreateTaskSuccessfully() {
-
+        UUID userId = UUID.randomUUID();
         CreateTaskRequest request = new CreateTaskRequest(
                 "Learn MongoDB",
                 "Description",
@@ -61,19 +67,24 @@ class TaskServiceImplTest {
                 Instant.now()
         );
 
+        when(currentUserService.getCurrentUserId()).thenReturn(userId);
         when(taskMapper.toEntity(request)).thenReturn(task);
-        when(taskRepository.save(task)).thenReturn(task);
+        when(taskRepository.save(any(Task.class))).thenReturn(task);
         when(taskMapper.toResponse(task)).thenReturn(response);
 
         TaskResponse result = taskService.createTask(request);
 
         assertThat(result.title()).isEqualTo("Learn MongoDB");
-        verify(taskRepository).save(task);
+        ArgumentCaptor<Task> captor = ArgumentCaptor.forClass(Task.class);
+        verify(taskRepository).save(captor.capture());
+        assertThat(captor.getValue().getUserId()).isEqualTo(userId);
+        assertThat(captor.getValue().getStatus()).isEqualTo(TaskStatus.TODO);
+        assertThat(captor.getValue().getCreatedAt()).isNotNull();
     }
 
     @Test
     void shouldReturnTaskById() {
-
+        UUID userId = UUID.randomUUID();
         String id = "123";
         Task task = new Task();
         task.setId(id);
@@ -90,63 +101,67 @@ class TaskServiceImplTest {
                         Instant.now()
                 );
 
-        when(taskRepository.findById(id)).thenReturn(Optional.of(task));
+        when(currentUserService.getCurrentUserId()).thenReturn(userId);
+        when(taskRepository.findByIdAndUserId(id, userId)).thenReturn(Optional.of(task));
         when(taskMapper.toResponse(task)).thenReturn(response);
 
         TaskResponse result = taskService.getTaskById(id);
 
         assertThat(result.id()).isEqualTo(id);
         assertThat(result.title()).isEqualTo("Test task");
-        verify(taskRepository).findById(id);
+        verify(taskRepository).findByIdAndUserId(id, userId);
     }
 
     @Test
     void shouldThrowExceptionWhenTaskNotFound() {
-
+        UUID userId = UUID.randomUUID();
         String id = "999";
 
-        when(taskRepository.findById(id)).thenReturn(Optional.empty());
+        when(currentUserService.getCurrentUserId()).thenReturn(userId);
+        when(taskRepository.findByIdAndUserId(id, userId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> taskService.getTaskById(id))
                 .isInstanceOf(TaskNotFoundException.class)
                 .hasMessage("Task with id: 999 was not found");
-        verify(taskRepository).findById(id);
+        verify(taskRepository).findByIdAndUserId(id, userId);
     }
 
     @Test
     void shouldDeleteTaskSuccessfully() {
-
+        UUID userId = UUID.randomUUID();
         String id = "123";
         Task taskToDelete = new Task();
         taskToDelete.setId(id);
         taskToDelete.setTitle("Test task");
 
-        when(taskRepository.findById(id)).thenReturn(Optional.of(taskToDelete));
+        when(currentUserService.getCurrentUserId()).thenReturn(userId);
+        when(taskRepository.findByIdAndUserId(id, userId)).thenReturn(Optional.of(taskToDelete));
 
         taskService.deleteTaskById(id);
 
-        verify(taskRepository).findById(id);
+        verify(taskRepository).findByIdAndUserId(id, userId);
         verify(taskRepository).delete(taskToDelete);
     }
 
     @Test
     void shouldThrowExceptionWhenDeletingNonExistingTask() {
-
+        UUID userId = UUID.randomUUID();
         String id = "123";
 
-        when(taskRepository.findById(id)).thenReturn(Optional.empty());
+        when(currentUserService.getCurrentUserId()).thenReturn(userId);
+        when(taskRepository.findByIdAndUserId(id, userId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> taskService.deleteTaskById(id))
                 .isInstanceOf(TaskNotFoundException.class)
                 .hasMessage("Task with id: 123 was not found");
 
-        verify(taskRepository).findById(id);
+        verify(taskRepository).findByIdAndUserId(id, userId);
         verify(taskRepository, never()).delete(any(Task.class));
     }
 
     @Test
     void shouldReturnAllTasksWithPagination() {
-
+        UUID userId = UUID.randomUUID();
 
         Instant firstCreatedAt = Instant.parse( "2026-07-29T15:00:00Z" );
         Instant secondCreatedAt = Instant.parse( "2026-07-29T16:00:00Z" );
@@ -205,6 +220,7 @@ class TaskServiceImplTest {
                 5
         );
 
+        when(currentUserService.getCurrentUserId()).thenReturn(userId);
         when(taskRepository.findAll(
                 ArgumentMatchers.<Example<Task>>any(),
                 eq(pageable)
@@ -238,7 +254,7 @@ class TaskServiceImplTest {
 
     @Test
     void shouldThrowExceptionWhenUpdatingNonExistingTask() {
-
+        UUID userId = UUID.randomUUID();
         String id = "unknown-id";
 
         UpdateTaskRequest request = new UpdateTaskRequest(
@@ -248,17 +264,18 @@ class TaskServiceImplTest {
                 TaskPriority.MEDIUM
         );
 
-        when(taskRepository.findById(id)).thenReturn(Optional.empty());
+        when(currentUserService.getCurrentUserId()).thenReturn(userId);
+        when(taskRepository.findByIdAndUserId(id, userId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> taskService.updateTask(id, request))
                 .isInstanceOf(TaskNotFoundException.class)
                 .hasMessage("Task with id: unknown-id was not found");
-        verify(taskRepository).findById(id);
+        verify(taskRepository).findByIdAndUserId(id, userId);
         verify(taskRepository, never()).save(any(Task.class));
     }
 
     @Test void shouldReturnTasksFilteredByStatus() {
-
+        UUID userId = UUID.randomUUID();
         TaskStatus status = TaskStatus.TODO;
         Pageable pageable = PageRequest.of(0, 10);
         Task task = new Task();
@@ -283,6 +300,7 @@ class TaskServiceImplTest {
                 1
         );
 
+        when(currentUserService.getCurrentUserId()).thenReturn(userId);
         when(taskRepository.findAll(ArgumentMatchers.<Example<Task>>any(), eq(pageable))).thenReturn(taskPage);
         when(taskMapper.toResponse(task)).thenReturn(response);
 
@@ -296,7 +314,7 @@ class TaskServiceImplTest {
     }
 
     @Test void shouldReturnTasksFilteredByPriority() {
-
+        UUID userId = UUID.randomUUID();
         TaskPriority priority = TaskPriority.HIGH;
         Pageable pageable = PageRequest.of(
                 0,
@@ -325,6 +343,7 @@ class TaskServiceImplTest {
                 1
         );
 
+        when(currentUserService.getCurrentUserId()).thenReturn(userId);
         when(taskRepository.findAll(ArgumentMatchers.<Example<Task>>any(), eq(pageable))).thenReturn(taskPage);
         when(taskMapper.toResponse(task)).thenReturn(response);
 
@@ -337,7 +356,7 @@ class TaskServiceImplTest {
     }
 
     @Test void shouldReturnTasksFilteredByStatusAndPriority() {
-
+        UUID userId = UUID.randomUUID();
         TaskStatus status = TaskStatus.TODO;
         TaskPriority priority = TaskPriority.HIGH;
         Pageable pageable = PageRequest.of(
@@ -367,6 +386,7 @@ class TaskServiceImplTest {
                 1
         );
 
+        when(currentUserService.getCurrentUserId()).thenReturn(userId);
         when(taskRepository.findAll(ArgumentMatchers.<Example<Task>>any(), eq(pageable))).thenReturn(taskPage);
         when(taskMapper.toResponse(task)).thenReturn(response);
 
