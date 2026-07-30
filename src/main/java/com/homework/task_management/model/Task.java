@@ -6,6 +6,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Data
 @Document(collection = "tasks")
@@ -21,6 +22,8 @@ public class Task {
     private TaskStatus status;
 
     private TaskPriority priority;
+
+    private UUID userId;
 
     @CreatedDate
     private Instant createdAt;

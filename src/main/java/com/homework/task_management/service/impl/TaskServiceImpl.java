@@ -10,6 +10,7 @@ import com.homework.task_management.model.TaskPriority;
 import com.homework.task_management.model.TaskStatus;
 import com.homework.task_management.repository.TaskRepository;
 import com.homework.task_management.service.TaskService;
+import com.homework.task_management.utility.CurrentUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Pageable;
 import java.time.Instant;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -24,12 +26,15 @@ public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
     private final TaskMapper taskMapper;
+    private final CurrentUserService currentUserService;
 
     @Override
     public TaskResponse createTask(CreateTaskRequest request) {
 
+        UUID userId = currentUserService.getCurrentUserId();
         Task task = taskMapper.toEntity(request);
 
+        task.setUserId(userId);
         task.setStatus(TaskStatus.TODO);
         task.setCreatedAt(Instant.now());
 
@@ -41,8 +46,10 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public Page<TaskResponse> getAll(TaskStatus status, TaskPriority priority, Pageable pageable) {
 
+        UUID userId = currentUserService.getCurrentUserId();
         Task taskFilter = new Task();
 
+        taskFilter.setUserId(userId);
         taskFilter.setStatus(status);
         taskFilter.setPriority(priority);
 
@@ -86,7 +93,10 @@ public class TaskServiceImpl implements TaskService {
     }
 
     private Task getTaskEntityFromDb(String id) {
-        return taskRepository.findById(id)
+
+        UUID userId = currentUserService.getCurrentUserId();
+
+        return taskRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new TaskNotFoundException(id));
     }
 }

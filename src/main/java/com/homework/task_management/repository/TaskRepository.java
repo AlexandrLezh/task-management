@@ -8,5 +8,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.repository.query.QueryByExampleExecutor;
 
+import java.util.Optional;
+import java.util.UUID;
+
 public interface TaskRepository extends MongoRepository<Task, String>, QueryByExampleExecutor<Task> {
+
+    Optional<Task> findByIdAndUserId(String id, UUID userId);
 }
