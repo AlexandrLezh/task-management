@@ -78,9 +78,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(UserAlreadyExistsException.class)
-    public ResponseEntity<ApiError> handleUserAlreadyExists(
-            UserAlreadyExistsException exception
-    ) {
+    public ResponseEntity<ApiError> handleUserAlreadyExists(UserAlreadyExistsException exception) {
 
         ApiError error = new ApiError(
                 Instant.now(),
@@ -91,6 +89,21 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
+                .body(error);
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiError> handleHttpMessageNotReadable(InvalidCredentialsException exception) {
+
+        ApiError error = new ApiError(
+                Instant.now(),
+                HttpStatus.UNAUTHORIZED.value(),
+                "User has not been authenticated",
+                List.of(exception.getMessage())
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
                 .body(error);
     }
 }

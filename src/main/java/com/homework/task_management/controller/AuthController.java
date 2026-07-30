@@ -1,5 +1,7 @@
 package com.homework.task_management.controller;
 
+import com.homework.task_management.dto.AuthResponse;
+import com.homework.task_management.dto.LoginRequest;
 import com.homework.task_management.dto.RegisterRequest;
 import com.homework.task_management.repository.UserRepository;
 import com.homework.task_management.service.AuthService;
@@ -24,5 +26,11 @@ public class AuthController {
     public void register(@Valid @RequestBody RegisterRequest request) {
 
         authService.register(request);
+    }
+
+    @PostMapping("/login")
+    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
+
+        return authService.login(request);
     }
 }
